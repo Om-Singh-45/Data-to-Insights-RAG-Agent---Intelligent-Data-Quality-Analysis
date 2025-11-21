@@ -1,0 +1,8 @@
+order_id,order_date,product,category,quantity,unit_price,country
+1001,2025-01-05,Wireless Mouse,Electronics,2,15.99,India
+1002,2025-01-06,USB-C Cable,Electronics,3,7.50,India
+1003,2025-01-07,Notebook,Stationery,5,2.00,India
+1004,2025-02-10,Mechanical Keyboard,Electronics,1,62.00,USA
+1005,2025-03-01,Office Chair,Furniture,1,120.00,India
+1006,2025-03-05,Desk Lamp,Furniture,2,18.00,UK
+1007,2025-03-12,Pen Set,Stationery,10,1.50,USA
