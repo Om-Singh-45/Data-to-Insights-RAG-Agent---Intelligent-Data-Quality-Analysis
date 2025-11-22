@@ -122,13 +122,13 @@ EMBEDDING_PROVIDER=gemini
 <img width="1801" height="786" alt="Screenshot 2025-11-22 211435" src="https://github.com/user-attachments/assets/f216ae12-6cd6-4942-98ef-b9e3edbb1153" />
 
 *Data Quality Analysis*
-![Data Quality](<img width="1878" height="784" alt="Screenshot 2025-11-22 211452" src="https://github.com/user-attachments/assets/291f2273-144f-4712-bc15-394591e14bd6" />)
+![Data Quality] <img width="1878" height="784" alt="Screenshot 2025-11-22 211452" src="https://github.com/user-attachments/assets/291f2273-144f-4712-bc15-394591e14bd6" />
 
 *Question Answering*
-![Q&A](<img width="1828" height="855" alt="Screenshot 2025-11-22 211816" src="https://github.com/user-attachments/assets/38ef9dac-1a0b-41c2-8c87-f6956e07301a" />)
+![Q&A] <img width="1828" height="855" alt="Screenshot 2025-11-22 211816" src="https://github.com/user-attachments/assets/38ef9dac-1a0b-41c2-8c87-f6956e07301a" />
 
 *Intelligent Visualization*
-![Visualization](<img width="1829" height="875" alt="Screenshot 2025-11-22 211903" src="https://github.com/user-attachments/assets/320e77d2-383b-4cfc-a7ce-4147c681b7a4" />)
+![Visualization] <img width="1829" height="875" alt="Screenshot 2025-11-22 211903" src="https://github.com/user-attachments/assets/320e77d2-383b-4cfc-a7ce-4147c681b7a4" />
 
 ## 🔒 Privacy & Security
 
