@@ -63,9 +63,8 @@ except ImportError:
 
 
 # -------- Config --------
+# OPENROUTER_API_KEY validation moved to runtime to avoid import-time errors
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-if not OPENROUTER_API_KEY:
-    raise ValueError("❌ OPENROUTER_API_KEY not found! Add it in .env file.")
 
 
 # -------- Data Cleaning & Quality Profiling --------
@@ -640,6 +639,10 @@ def load_dataframe(persist_dir="chroma_db") -> Optional[pd.DataFrame]:
 
 # -------- Answer Using RAG --------
 def answer_question(question: str, persist_dir="chroma_db", top_k: int = 4):
+    # Validate API key at runtime
+    if not OPENROUTER_API_KEY:
+        raise ValueError("❌ OPENROUTER_API_KEY not found! Add it in .env file.")
+    
     df = load_dataframe(persist_dir)
     if df is None:
         return "⚠ No data indexed. Upload & index a dataset first!", [], None
@@ -695,6 +698,10 @@ def answer_question(question: str, persist_dir="chroma_db", top_k: int = 4):
 # -------- Intelligent Chart Generation --------
 def generate_smart_chart(df: pd.DataFrame, question: str, answer_text: str, top_k: int = 5):
     """Generate appropriate chart based on question, answer, and actual data."""
+    
+    # Validate API key at runtime
+    if not OPENROUTER_API_KEY:
+        raise ValueError("❌ OPENROUTER_API_KEY not found! Add it in .env file.")
     
     # First, ask the LLM which visualization would be most suitable
     # Use lazy-loaded OpenRouter
