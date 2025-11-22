@@ -111,17 +111,24 @@ EMBEDDING_PROVIDER=gemini
 
 ## 📸 Screenshots
 
+*Data Cleaning Overview*
+![Data Cleaning]<img width="1838" height="812" alt="Screenshot 2025-11-22 211140" src="https://github.com/user-attachments/assets/eb96e3b0-39fc-4ee5-8a77-a563f209c044" />
+<img width="1861" height="793" alt="Screenshot 2025-11-22 211201" src="https://github.com/user-attachments/assets/0c98ccea-ff7b-4cce-b1fc-d116b3433883" />
+
+
+
 *Dashboard Overview*
-![Dashboard](screenshots/dashboard.png)
+![Dashboard]<img width="1811" height="854" alt="Screenshot 2025-11-22 211410" src="https://github.com/user-attachments/assets/7e04f369-01f2-4414-b234-106608cec7b6" />
+<img width="1801" height="786" alt="Screenshot 2025-11-22 211435" src="https://github.com/user-attachments/assets/f216ae12-6cd6-4942-98ef-b9e3edbb1153" />
 
 *Data Quality Analysis*
-![Data Quality](screenshots/data_quality.png)
+![Data Quality](<img width="1878" height="784" alt="Screenshot 2025-11-22 211452" src="https://github.com/user-attachments/assets/291f2273-144f-4712-bc15-394591e14bd6" />)
 
 *Question Answering*
-![Q&A](screenshots/question_answering.png)
+![Q&A](<img width="1828" height="855" alt="Screenshot 2025-11-22 211816" src="https://github.com/user-attachments/assets/38ef9dac-1a0b-41c2-8c87-f6956e07301a" />)
 
 *Intelligent Visualization*
-![Visualization](screenshots/visualization.png)
+![Visualization](<img width="1829" height="875" alt="Screenshot 2025-11-22 211903" src="https://github.com/user-attachments/assets/320e77d2-383b-4cfc-a7ce-4147c681b7a4" />)
 
 ## 🔒 Privacy & Security
 
