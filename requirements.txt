@@ -7,6 +7,7 @@ chromadb
 python-dotenv
 google-generativeai
 llama-index-embeddings-gemini
+llama-index-embeddings-huggingface
 llama-index-llms-openrouter
 llama-index==0.10.46
 llama-index-core==0.10.46
