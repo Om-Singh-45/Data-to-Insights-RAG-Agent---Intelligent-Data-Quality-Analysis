@@ -661,9 +661,13 @@ def load_dataframe(persist_dir="chroma_db") -> Optional[pd.DataFrame]:
 
 # -------- Answer Using RAG --------
 def answer_question(question: str, persist_dir="chroma_db", top_k: int = 4):
-    # Validate API key at runtime
-    if not OPENROUTER_API_KEY:
-        raise ValueError("❌ OPENROUTER_API_KEY not found! Add it in .env file.")
+    # Check which LLM provider to use based on embedding provider
+    embedding_provider = os.getenv('EMBEDDING_PROVIDER', 'hf').lower()
+    
+    # Only validate OPENROUTER_API_KEY if we're using OpenRouter
+    if embedding_provider != 'gemini':
+        if not OPENROUTER_API_KEY:
+            raise ValueError("❌ OPENROUTER_API_KEY not found! Add it in .env file.")
     
     df = load_dataframe(persist_dir)
     if df is None:
@@ -671,12 +675,50 @@ def answer_question(question: str, persist_dir="chroma_db", top_k: int = 4):
 
     index = build_or_load_index(df, persist_dir)
 
-    # Use lazy-loaded OpenRouter
-    OpenRouter = _get_openrouter()
-    llm = OpenRouter(
-        model="anthropic/claude-3.5-sonnet",
-        api_key=OPENROUTER_API_KEY
-    )
+    # Use appropriate LLM based on embedding provider
+    if embedding_provider == 'gemini':
+        # For Gemini embeddings, we can use Gemini as the LLM as well
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_api_key:
+            raise ValueError("❌ GEMINI_API_KEY not found! Add it in .env file.")
+        
+        # Import and use Gemini LLM
+        try:
+            from llama_index.llms.gemini import Gemini
+            llm = Gemini(model="models/gemini-pro", api_key=gemini_api_key)
+        except ImportError:
+            # Try alternative import mechanism
+            try:
+                import importlib
+                Gemini = importlib.import_module('llama_index.llms.gemini').Gemini
+                llm = Gemini(model="models/gemini-pro", api_key=gemini_api_key)
+            except Exception:
+                # Fallback to OpenRouter if Gemini LLM is not available or fails
+                if not OPENROUTER_API_KEY:
+                    raise ValueError("❌ OPENROUTER_API_KEY not found! Add it in .env file.")
+                OpenRouter = _get_openrouter()
+                llm = OpenRouter(
+                    model="anthropic/claude-3.5-sonnet",
+                    api_key=OPENROUTER_API_KEY
+                )
+        except Exception:
+            # Fallback to OpenRouter if Gemini LLM fails for other reasons
+            if not OPENROUTER_API_KEY:
+                raise ValueError("❌ OPENROUTER_API_KEY not found! Add it in .env file.")
+            OpenRouter = _get_openrouter()
+            llm = OpenRouter(
+                model="anthropic/claude-3.5-sonnet",
+                api_key=OPENROUTER_API_KEY
+            )
+    else:
+        # Use OpenRouter for HuggingFace embeddings
+        if not OPENROUTER_API_KEY:
+            raise ValueError("❌ OPENROUTER_API_KEY not found! Add it in .env file.")
+        OpenRouter = _get_openrouter()
+        llm = OpenRouter(
+            model="anthropic/claude-3.5-sonnet",
+            api_key=OPENROUTER_API_KEY
+        )
 
     try:
         query_engine = index.as_query_engine(llm=llm, similarity_top_k=top_k)
@@ -721,17 +763,59 @@ def answer_question(question: str, persist_dir="chroma_db", top_k: int = 4):
 def generate_smart_chart(df: pd.DataFrame, question: str, answer_text: str, top_k: int = 5):
     """Generate appropriate chart based on question, answer, and actual data."""
     
-    # Validate API key at runtime
-    if not OPENROUTER_API_KEY:
-        raise ValueError("❌ OPENROUTER_API_KEY not found! Add it in .env file.")
+    # Check which LLM provider to use based on embedding provider
+    embedding_provider = os.getenv('EMBEDDING_PROVIDER', 'hf').lower()
+    
+    # Only validate OPENROUTER_API_KEY if we're using OpenRouter
+    if embedding_provider != 'gemini':
+        if not OPENROUTER_API_KEY:
+            raise ValueError("❌ OPENROUTER_API_KEY not found! Add it in .env file.")
     
     # First, ask the LLM which visualization would be most suitable
-    # Use lazy-loaded OpenRouter
-    OpenRouter = _get_openrouter()
-    llm = OpenRouter(
-        model="anthropic/claude-3.5-sonnet",
-        api_key=OPENROUTER_API_KEY
-    )
+    # Use appropriate LLM based on embedding provider
+    if embedding_provider == 'gemini':
+        # For Gemini embeddings, we can use Gemini as the LLM as well
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_api_key:
+            raise ValueError("❌ GEMINI_API_KEY not found! Add it in .env file.")
+        
+        # Import and use Gemini LLM
+        try:
+            from llama_index.llms.gemini import Gemini
+            llm = Gemini(model="models/gemini-pro", api_key=gemini_api_key)
+        except ImportError:
+            # Try alternative import mechanism
+            try:
+                import importlib
+                Gemini = importlib.import_module('llama_index.llms.gemini').Gemini
+                llm = Gemini(model="models/gemini-pro", api_key=gemini_api_key)
+            except Exception:
+                # Fallback to OpenRouter if Gemini LLM is not available or fails
+                if not OPENROUTER_API_KEY:
+                    raise ValueError("❌ OPENROUTER_API_KEY not found! Add it in .env file.")
+                OpenRouter = _get_openrouter()
+                llm = OpenRouter(
+                    model="anthropic/claude-3.5-sonnet",
+                    api_key=OPENROUTER_API_KEY
+                )
+        except Exception:
+            # Fallback to OpenRouter if Gemini LLM fails for other reasons
+            if not OPENROUTER_API_KEY:
+                raise ValueError("❌ OPENROUTER_API_KEY not found! Add it in .env file.")
+            OpenRouter = _get_openrouter()
+            llm = OpenRouter(
+                model="anthropic/claude-3.5-sonnet",
+                api_key=OPENROUTER_API_KEY
+            )
+    else:
+        # Use OpenRouter for HuggingFace embeddings
+        if not OPENROUTER_API_KEY:
+            raise ValueError("❌ OPENROUTER_API_KEY not found! Add it in .env file.")
+        OpenRouter = _get_openrouter()
+        llm = OpenRouter(
+            model="anthropic/claude-3.5-sonnet",
+            api_key=OPENROUTER_API_KEY
+        )
     
     # Create a prompt to ask which visualization is most suitable
     viz_prompt = f"""
