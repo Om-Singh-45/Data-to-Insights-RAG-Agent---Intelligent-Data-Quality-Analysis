@@ -21,12 +21,34 @@ def _import_llama_index_components():
     except ImportError as e:
         # Fallback import mechanism for deployment issues
         import importlib
-        VectorStoreIndex = importlib.import_module('llama_index.core').VectorStoreIndex
-        StorageContext = importlib.import_module('llama_index.core').StorageContext
-        load_index_from_storage = importlib.import_module('llama_index.core').load_index_from_storage
-        HuggingFaceEmbedding = importlib.import_module('llama_index.embeddings.huggingface').HuggingFaceEmbedding
-        Document = importlib.import_module('llama_index.core.schema').Document
-        SimpleNodeParser = importlib.import_module('llama_index.core.node_parser').SimpleNodeParser
+        # Try direct imports first
+        try:
+            from llama_index.core import VectorStoreIndex, StorageContext, load_index_from_storage
+        except ImportError:
+            # Fallback to module access
+            llama_core = importlib.import_module('llama_index.core')
+            VectorStoreIndex = getattr(llama_core, 'VectorStoreIndex', None)
+            if VectorStoreIndex is None:
+                # Try alternative import path
+                from llama_index.core.indices.vector_store import VectorStoreIndex
+                from llama_index.core.storage import StorageContext
+                from llama_index.core.indices.loading import load_index_from_storage
+        
+        try:
+            from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+        except ImportError:
+            HuggingFaceEmbedding = importlib.import_module('llama_index.embeddings.huggingface').HuggingFaceEmbedding
+            
+        try:
+            from llama_index.core.schema import Document
+        except ImportError:
+            Document = importlib.import_module('llama_index.core.schema').Document
+            
+        try:
+            from llama_index.core.node_parser import SimpleNodeParser
+        except ImportError:
+            SimpleNodeParser = importlib.import_module('llama_index.core.node_parser').SimpleNodeParser
+            
         return VectorStoreIndex, StorageContext, load_index_from_storage, HuggingFaceEmbedding, Document, SimpleNodeParser
 
 # Import OpenRouter separately to avoid circular dependencies
