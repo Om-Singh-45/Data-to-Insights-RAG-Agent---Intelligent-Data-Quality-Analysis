@@ -10,15 +10,50 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-from llama_index.core import (
-    VectorStoreIndex,
-    StorageContext,
-    load_index_from_storage
-)
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.llms.openrouter import OpenRouter
-from llama_index.core.schema import Document
-from llama_index.core.node_parser import SimpleNodeParser
+# Lazy import LlamaIndex components to avoid circular imports
+def _import_llama_index_components():
+    try:
+        from llama_index.core import VectorStoreIndex, StorageContext, load_index_from_storage
+        from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+        from llama_index.core.schema import Document
+        from llama_index.core.node_parser import SimpleNodeParser
+        return VectorStoreIndex, StorageContext, load_index_from_storage, HuggingFaceEmbedding, Document, SimpleNodeParser
+    except ImportError as e:
+        # Fallback import mechanism for deployment issues
+        import importlib
+        VectorStoreIndex = importlib.import_module('llama_index.core').VectorStoreIndex
+        StorageContext = importlib.import_module('llama_index.core').StorageContext
+        load_index_from_storage = importlib.import_module('llama_index.core').load_index_from_storage
+        HuggingFaceEmbedding = importlib.import_module('llama_index.embeddings.huggingface').HuggingFaceEmbedding
+        Document = importlib.import_module('llama_index.core.schema').Document
+        SimpleNodeParser = importlib.import_module('llama_index.core.node_parser').SimpleNodeParser
+        return VectorStoreIndex, StorageContext, load_index_from_storage, HuggingFaceEmbedding, Document, SimpleNodeParser
+
+# Import OpenRouter separately to avoid circular dependencies
+def _import_openrouter():
+    try:
+        from llama_index.llms.openrouter import OpenRouter
+        return OpenRouter
+    except ImportError:
+        # Fallback import mechanism
+        import importlib
+        return importlib.import_module('llama_index.llms.openrouter').OpenRouter
+
+# Lazy load components when needed
+_llama_components = None
+_openrouter_class = None
+
+def _get_llama_components():
+    global _llama_components
+    if _llama_components is None:
+        _llama_components = _import_llama_index_components()
+    return _llama_components
+
+def _get_openrouter():
+    global _openrouter_class
+    if _openrouter_class is None:
+        _openrouter_class = _import_openrouter()
+    return _openrouter_class
 
 try:
     from llama_index.embeddings.gemini import GeminiEmbedding
@@ -404,6 +439,7 @@ def get_embeddings():
 
     if provider in ("hf", "huggingface", "local"):
         try:
+            _, _, _, HuggingFaceEmbedding, _, _ = _get_llama_components()
             return HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
         except Exception as e:
             raise RuntimeError(
@@ -525,12 +561,13 @@ def generate_data_summaries(df: pd.DataFrame) -> List[str]:
 
 
 # -------- Convert DF to Vector-Readable Docs --------
-def df_to_documents(df: pd.DataFrame) -> List[Document]:
+def df_to_documents(df: pd.DataFrame) -> List:
     """Convert dataframe into documents for RAG using summaries + actual rows."""
     docs = []
     
     # Add pre-computed summaries (these help RAG understand the data)
     summaries = generate_data_summaries(df)
+    _, _, _, _, Document, _ = _get_llama_components()
     for summary in summaries:
         docs.append(Document(text=summary))
     
@@ -562,6 +599,9 @@ def build_or_load_index(df: pd.DataFrame, persist_dir="chroma_db"):
     persist_dir.mkdir(parents=True, exist_ok=True)
 
     embed_model = get_embeddings()
+    
+    # Get LlamaIndex components
+    VectorStoreIndex, StorageContext, load_index_from_storage, _, _, _ = _get_llama_components()
 
     if (persist_dir / "docstore.json").exists():
         print("🔄 Loading existing index...")
@@ -570,6 +610,7 @@ def build_or_load_index(df: pd.DataFrame, persist_dir="chroma_db"):
 
     print("📌 Creating new index with data summaries...")
     docs = df_to_documents(df)
+    _, _, _, _, _, SimpleNodeParser = _get_llama_components()
     parser = SimpleNodeParser()
     nodes = parser.get_nodes_from_documents(docs)
 
@@ -605,6 +646,8 @@ def answer_question(question: str, persist_dir="chroma_db", top_k: int = 4):
 
     index = build_or_load_index(df, persist_dir)
 
+    # Use lazy-loaded OpenRouter
+    OpenRouter = _get_openrouter()
     llm = OpenRouter(
         model="anthropic/claude-3.5-sonnet",
         api_key=OPENROUTER_API_KEY
@@ -654,6 +697,8 @@ def generate_smart_chart(df: pd.DataFrame, question: str, answer_text: str, top_
     """Generate appropriate chart based on question, answer, and actual data."""
     
     # First, ask the LLM which visualization would be most suitable
+    # Use lazy-loaded OpenRouter
+    OpenRouter = _get_openrouter()
     llm = OpenRouter(
         model="anthropic/claude-3.5-sonnet",
         api_key=OPENROUTER_API_KEY

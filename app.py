@@ -12,20 +12,43 @@ import numpy as np
 from scipy import stats
 from plotly.subplots import make_subplots
 
-from rag_utils import (
-    build_or_load_index,
-    answer_question,
-    save_dataframe,
-    load_dataframe,
-    clean_dataset,
-    create_data_quality_heatmap,
-    create_missing_value_pattern,
-    create_kpi_dashboard,
-    create_distribution_pie_chart,
-    create_trend_line_chart,
-    create_box_plot,
-    create_histogram_analysis,
-)
+# Import rag_utils with error handling for deployment issues
+try:
+    from rag_utils import (
+        build_or_load_index,
+        answer_question,
+        save_dataframe,
+        load_dataframe,
+        clean_dataset,
+        create_data_quality_heatmap,
+        create_missing_value_pattern,
+        create_kpi_dashboard,
+        create_distribution_pie_chart,
+        create_trend_line_chart,
+        create_box_plot,
+        create_histogram_analysis,
+    )
+except ImportError as e:
+    st.error(f"Import error: {e}")
+    st.info("The application is still loading. Please wait...")
+    # Try alternative import approach
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    from rag_utils import (
+        build_or_load_index,
+        answer_question,
+        save_dataframe,
+        load_dataframe,
+        clean_dataset,
+        create_data_quality_heatmap,
+        create_missing_value_pattern,
+        create_kpi_dashboard,
+        create_distribution_pie_chart,
+        create_trend_line_chart,
+        create_box_plot,
+        create_histogram_analysis,
+    )
 
 # Load env
 load_dotenv()
