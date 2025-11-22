@@ -9,6 +9,7 @@ google-generativeai
 llama-index-embeddings-gemini
 llama-index-embeddings-huggingface
 llama-index-llms-openrouter
+llama-index-llms-gemini
 llama-index==0.10.46
 llama-index-core==0.10.46
 llama-index-cli==0.1.12
