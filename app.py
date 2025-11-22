@@ -267,6 +267,9 @@ if uploaded_file:
             # ========== OPTIMIZED DASHBOARD - FAST & LIGHTWEIGHT ==========
             st.markdown('<div class="section-header">📊 Data Quality & Analytics Dashboard</div>', unsafe_allow_html=True)
             
+            # Inform user that dashboard is loading
+            st.info("🔄 Loading Data Quality & Analytics Dashboard... Please wait while we generate insights from your data.")
+            
             # Add progress indicator for dashboard creation
             dashboard_expander = st.expander("📈 Dashboard Creation Progress", expanded=True)
             dashboard_status = dashboard_expander.empty()
@@ -307,7 +310,7 @@ if uploaded_file:
                     dashboard_status.info("📊 Generating data quality heatmap...")
                     quality_fig = create_data_quality_heatmap(df, cleaning_report)
                     if quality_fig is not None:
-                        st.plotly_chart(quality_fig, use_container_width=True)
+                        st.plotly_chart(quality_fig, use_container_width=True, key="quality_heatmap")
                     else:
                         st.info("Quality analysis not available for this dataset")
                 
@@ -316,7 +319,7 @@ if uploaded_file:
                     dashboard_status.info("📈 Analyzing missing values pattern...")
                     missing_fig = create_missing_value_pattern(df)
                     if missing_fig is not None:
-                        st.plotly_chart(missing_fig, use_container_width=True)
+                        st.plotly_chart(missing_fig, use_container_width=True, key="missing_pattern")
                     else:
                         st.info("Missing values not found in this dataset")
                 
@@ -333,7 +336,7 @@ if uploaded_file:
                     dashboard_status.info("🥧 Generating categorical distribution chart...")
                     pie_fig = create_distribution_pie_chart(df)
                     if pie_fig is not None:
-                        st.plotly_chart(pie_fig, use_container_width=True)
+                        st.plotly_chart(pie_fig, use_container_width=True, key="distribution_pie")
                     else:
                         st.info("Need categorical data for distribution")
                 
@@ -342,7 +345,7 @@ if uploaded_file:
                     dashboard_status.info("📈 Generating trend analysis chart...")
                     line_fig = create_trend_line_chart(df)
                     if line_fig is not None:
-                        st.plotly_chart(line_fig, use_container_width=True)
+                        st.plotly_chart(line_fig, use_container_width=True, key="trend_line")
                     else:
                         st.info("Need numeric data for trends")
                 
@@ -356,7 +359,7 @@ if uploaded_file:
                     dashboard_status.info("🔍 Generating outlier detection chart...")
                     box_fig = create_box_plot(df)
                     if box_fig is not None:
-                        st.plotly_chart(box_fig, use_container_width=True)
+                        st.plotly_chart(box_fig, use_container_width=True, key="outlier_box")
                     else:
                         st.info("Need numeric data for outlier detection")
                 
@@ -365,7 +368,7 @@ if uploaded_file:
                     dashboard_status.info("📊 Generating frequency distribution chart...")
                     hist_fig = create_histogram_analysis(df)
                     if hist_fig is not None:
-                        st.plotly_chart(hist_fig, use_container_width=True)
+                        st.plotly_chart(hist_fig, use_container_width=True, key="frequency_histogram")
                     else:
                         st.info("Need numeric data for frequency distribution")
                 
@@ -457,7 +460,7 @@ if st.session_state.index_created and st.session_state.df is not None:
                         analysis_status.info("📊 Generating visualization based on your question...")
                         st.markdown("---")
                         st.subheader("Visualization:")
-                        st.plotly_chart(chart_fig, use_container_width=True)
+                        st.plotly_chart(chart_fig, use_container_width=True, key="question_chart")
                     
                     analysis_status.success("✅ Analysis complete!")
                     

@@ -397,6 +397,7 @@ def get_embeddings():
 
         # Check if GeminiEmbedding is available
         if GEMINI_EMBEDDING_AVAILABLE:
+            from llama_index.embeddings.gemini import GeminiEmbedding
             return GeminiEmbedding(api_key=gemini_api_key, model_name="models/embedding-001")
         else:
             raise RuntimeError("Gemini embeddings are not available. Please install the required packages.")
@@ -438,10 +439,14 @@ def get_kpi_metrics(df: pd.DataFrame) -> dict:
     if len(numeric_cols) > 0:
         # Convert to numpy values to avoid attribute access issues
         numeric_data = df[numeric_cols]
-        metrics['avg_value'] = float(numeric_data.mean().mean())
-        metrics['max_value'] = float(numeric_data.max().max())
-        metrics['min_value'] = float(numeric_data.min().min())
-        metrics['std_dev'] = float(numeric_data.std().mean())
+        # Fix attribute access issues by converting to list
+        if len(numeric_data) > 0:
+            metrics['avg_value'] = float(numeric_data.mean().mean())
+            metrics['max_value'] = float(numeric_data.max().max())
+            metrics['min_value'] = float(numeric_data.min().min())
+            metrics['std_dev'] = float(numeric_data.std().mean())
+        else:
+            metrics['avg_value'] = metrics['max_value'] = metrics['min_value'] = metrics['std_dev'] = 0.0
     else:
         metrics['avg_value'] = metrics['max_value'] = metrics['min_value'] = metrics['std_dev'] = 0
     
@@ -462,338 +467,6 @@ def create_kpi_dashboard(df: pd.DataFrame) -> dict:
     }
     
     return kpis
-
-
-def create_distribution_pie_chart(df: pd.DataFrame) -> Optional[go.Figure]:
-    """Create pie chart for categorical distribution analysis."""
-    cat_cols = df.select_dtypes(include=['object']).columns
-    
-    if len(cat_cols) == 0:
-        return None
-    
-    col = cat_cols[0]
-    value_counts = df[col].value_counts().head(10)
-    
-    fig = go.Figure(data=[go.Pie(
-        labels=value_counts.index,
-        values=value_counts.values,
-        marker=dict(colors=px.colors.qualitative.Set3),
-        textposition='inside',
-        textinfo='label+percent'
-    )])
-    
-    fig.update_layout(
-        title=f"📊 Distribution Analysis: {col}",
-        height=400,
-        template='plotly_white'
-    )
-    
-    return fig
-
-
-def create_donut_chart(df: pd.DataFrame) -> Optional[go.Figure]:
-    """Create donut chart for categorical comparison."""
-    cat_cols = df.select_dtypes(include=['object']).columns
-    
-    if len(cat_cols) < 2:
-        # If only one cat column, use it
-        if len(cat_cols) == 1:
-            col = cat_cols[0]
-            value_counts = df[col].value_counts().head(8)
-            
-            fig = go.Figure(data=[go.Pie(
-                labels=value_counts.index,
-                values=value_counts.values,
-                hole=.4,
-                marker=dict(colors=px.colors.qualitative.Pastel),
-                textposition='inside',
-                textinfo='label+value'
-            )])
-            
-            fig.update_layout(
-                title=f"🍩 Comparison: {col}",
-                height=400,
-                template='plotly_white'
-            )
-            
-            return fig
-        return None
-    
-    col = cat_cols[0]
-    value_counts = df[col].value_counts().head(8)
-    
-    fig = go.Figure(data=[go.Pie(
-        labels=value_counts.index,
-        values=value_counts.values,
-        hole=.4,
-        marker=dict(colors=px.colors.qualitative.Pastel),
-        textposition='inside',
-        textinfo='label+value'
-    )])
-    
-    fig.update_layout(
-        title=f"🍩 Comparison: {col}",
-        height=400,
-        template='plotly_white'
-    )
-    
-    return fig
-
-
-def create_stacked_bar_chart(df: pd.DataFrame) -> Optional[go.Figure]:
-    """Create stacked bar chart for multi-dimensional analysis."""
-    numeric_cols = df.select_dtypes(include=['number']).columns
-    cat_cols = df.select_dtypes(include=['object']).columns
-    
-    if len(numeric_cols) < 2 or len(cat_cols) == 0:
-        return None
-    
-    # Group by first categorical and sum numeric columns
-    cat_col = cat_cols[0]
-    num_cols_to_use = numeric_cols[:3]  # Use top 3 numeric columns
-    
-    grouped = df.groupby(cat_col)[num_cols_to_use].sum().head(10)
-    
-    fig = go.Figure()
-    
-    for col in num_cols_to_use:
-        fig.add_trace(go.Bar(
-            x=grouped.index,
-            y=grouped[col],
-            name=col
-        ))
-    
-    fig.update_layout(
-        barmode='stack',
-        title=f"📊 Stacked Analysis: {num_cols_to_use[0]} by {cat_col}",
-        xaxis_title=cat_col,
-        yaxis_title='Value',
-        height=400,
-        template='plotly_white',
-        hovermode='x unified'
-    )
-    
-    return fig
-
-
-def create_trend_line_chart(df: pd.DataFrame) -> Optional[go.Figure]:
-    """Create line chart for trend analysis."""
-    numeric_cols = df.select_dtypes(include=['number']).columns
-    
-    if len(numeric_cols) == 0:
-        return None
-    
-    # Use first numeric column and show cumulative trend
-    col = numeric_cols[0]
-    data = df[col].dropna().head(100)  # First 100 records
-    
-    if len(data) < 2:
-        return None
-    
-    fig = go.Figure()
-    
-    # Trend line
-    fig.add_trace(go.Scatter(
-        x=list(range(len(data))),
-        y=data.values,
-        mode='lines+markers',
-        name=f'{col} Trend',
-        line=dict(color='#667eea', width=3),
-        marker=dict(size=6)
-    ))
-    
-    # Moving average
-    ma = pd.Series(data.values).rolling(window=5, center=True).mean()
-    fig.add_trace(go.Scatter(
-        x=list(range(len(data))),
-        y=ma.tolist(),  # Convert to list to avoid values attribute issue
-        mode='lines',
-        name='5-Point MA',
-        line=dict(color='#f56565', width=2, dash='dash')
-    ))
-    
-    fig.update_layout(
-        title=f"📈 Trend Analysis: {col}",
-        xaxis_title='Record Index',
-        yaxis_title='Value',
-        height=400,
-        template='plotly_white',
-        hovermode='x unified'
-    )
-    
-    return fig
-
-
-def create_box_plot(df: pd.DataFrame) -> Optional[go.Figure]:
-    """Create box plot for distribution and outlier analysis."""
-    numeric_cols = df.select_dtypes(include=['number']).columns
-    
-    if len(numeric_cols) == 0:
-        return None
-    
-    # Use top 4 numeric columns
-    cols_to_plot = numeric_cols[:4]
-    
-    fig = go.Figure()
-    
-    for col in cols_to_plot:
-        fig.add_trace(go.Box(
-            y=df[col].dropna(),
-            name=col,
-            boxmean='sd'
-        ))
-    
-    fig.update_layout(
-        title="📦 Statistical Distribution & Outliers",
-        yaxis_title='Value',
-        height=400,
-        template='plotly_white',
-        hovermode='y'
-    )
-    
-    return fig
-
-
-def create_histogram_analysis(df: pd.DataFrame) -> Optional[go.Figure]:
-    """Create histogram for frequency distribution analysis."""
-    numeric_cols = df.select_dtypes(include=['number']).columns
-    
-    if len(numeric_cols) == 0:
-        return None
-    
-    col = numeric_cols[0]
-    data = df[col].dropna().astype(float)
-    
-    # Calculate appropriate number of bins
-    nbins = int(min(30, max(5, len(data) // 20)))
-    
-    fig = go.Figure(data=[
-        go.Histogram(
-            x=data,
-            nbinsx=nbins,
-            name=col,
-            marker_color='#667eea',
-            opacity=0.75
-        )
-    ])
-    
-    fig.update_layout(
-        title=f"📊 Frequency Distribution: {col}",
-        xaxis_title=col,
-        yaxis_title='Frequency',
-        height=400,
-        template='plotly_white'
-    )
-    
-    return fig
-
-
-def create_scatter_analysis(df: pd.DataFrame) -> Optional[go.Figure]:
-    """Create scatter plot for relationship analysis."""
-    numeric_cols = df.select_dtypes(include=['number']).columns
-    
-    if len(numeric_cols) < 2:
-        return None
-    
-    x_col = numeric_cols[0]
-    y_col = numeric_cols[1]
-    
-    fig = go.Figure(data=[
-        go.Scatter(
-            x=df[x_col].dropna(),
-            y=df[y_col].dropna(),
-            mode='markers',
-            marker=dict(
-                size=6,
-                color=df[x_col].dropna(),
-                colorscale='Viridis',
-                showscale=True,
-                colorbar=dict(title='Value')
-            ),
-            name=f'{x_col} vs {y_col}'
-        )
-    ])
-    
-    fig.update_layout(
-        title=f"🔗 Relationship: {x_col} vs {y_col}",
-        xaxis_title=x_col,
-        yaxis_title=y_col,
-        height=400,
-        template='plotly_white'
-    )
-    
-    return fig
-
-
-def create_heatmap_correlation(df: pd.DataFrame) -> Optional[go.Figure]:
-    """Create correlation heatmap for numeric columns."""
-    numeric_cols = df.select_dtypes(include=['number']).columns
-    
-    if len(numeric_cols) < 2:
-        return None
-    
-    corr_matrix = df[numeric_cols].corr(method='pearson')
-    
-    fig = go.Figure(data=go.Heatmap(
-        z=corr_matrix.values,
-        x=corr_matrix.columns,
-        y=corr_matrix.columns,
-        colorscale='RdBu',
-        zmid=0,
-        text=np.round(corr_matrix.values, 2),
-        texttemplate='%{text}',
-        textfont={"size": 10},
-        colorbar=dict(title='Correlation')
-    ))
-    
-    fig.update_layout(
-        title="🔥 Correlation Matrix: Numeric Columns",
-        height=400,
-        xaxis_title='Columns',
-        yaxis_title='Columns',
-        template='plotly_white'
-    )
-    
-    return fig
-
-
-def create_top_values_bar(df: pd.DataFrame) -> Optional[go.Figure]:
-    """Create bar chart for top values analysis."""
-    numeric_cols = df.select_dtypes(include=['number']).columns
-    cat_cols = df.select_dtypes(include=['object']).columns
-    
-    if len(numeric_cols) == 0 or len(cat_cols) == 0:
-        return None
-    
-    num_col = numeric_cols[0]
-    cat_col = cat_cols[0]
-    
-    top_data = df.groupby(by=cat_col)[num_col].sum().nlargest(n=10)
-    
-    fig = go.Figure(data=[
-        go.Bar(
-            x=top_data.index,
-            y=top_data.values,
-            marker=dict(
-                color=top_data.values,
-                colorscale='Blues',
-                showscale=True
-            ),
-            text=top_data.values,
-            textposition='outside'
-        )
-    ])
-    
-    fig.update_layout(
-        title=f"🏆 Top 10: {num_col} by {cat_col}",
-        xaxis_title=cat_col,
-        yaxis_title=num_col,
-        height=400,
-        template='plotly_white',
-        xaxis_tickangle=-45
-    )
-    
-    return fig
 
 
 # -------- Generate Smart Data Summaries --------
@@ -824,7 +497,7 @@ def generate_data_summaries(df: pd.DataFrame) -> List[str]:
     for num_col in numeric_cols:
         for cat_col in categorical_cols:
             try:
-                top_agg = df.groupby(by=cat_col)[num_col].sum().nlargest(n=10)
+                top_agg = df.groupby(cat_col)[num_col].sum().nlargest(n=10)
                 summary = f"[TOP {num_col}] Top {cat_col}: " + ", ".join(
                     f"{k}({v:.0f})" for k, v in top_agg.items()
                 )
@@ -840,7 +513,7 @@ def generate_data_summaries(df: pd.DataFrame) -> List[str]:
         id_col = id_cols[0]
         qty_col = qty_cols[0]
         try:
-            top_by_qty = df.nlargest(20, qty_col)[[id_col, qty_col]].to_dict(orient='records')
+            top_by_qty = df.nlargest(n=20, columns=qty_col)[[id_col, qty_col]].to_dict()
             summary = f"[TOP {qty_col}] Top Order IDs by {qty_col}: " + ", ".join(
                 f"{row[id_col]}({row[qty_col]})" for row in top_by_qty
             )
@@ -865,7 +538,9 @@ def df_to_documents(df: pd.DataFrame) -> List[Document]:
     # For larger datasets, sample strategically
     if len(df) > 200:
         # Sample: top 100 + random 100
-        top_100 = df.nlargest(n=100, columns=df.select_dtypes(include=['number']).columns[0] if len(df.select_dtypes(include=['number']).columns) > 0 else df.index[0])
+        numeric_columns = df.select_dtypes(include=['number']).columns
+        sort_column = numeric_columns[0] if len(numeric_columns) > 0 else df.columns[0]
+        top_100 = df.nlargest(n=100, columns=sort_column)
         random_100 = df.sample(min(100, len(df)))
         sample_df = pd.concat([top_100, random_100]).drop_duplicates()
     else:
@@ -915,7 +590,10 @@ def save_dataframe(df: pd.DataFrame, persist_dir="chroma_db"):
 def load_dataframe(persist_dir="chroma_db") -> Optional[pd.DataFrame]:
     file = Path(persist_dir) / "persist_df.pkl"
     if file.exists():
-        return pd.read_pickle(file)
+        result = pd.read_pickle(file)
+        if isinstance(result, pd.DataFrame):
+            return result
+        return None
     return None
 
 
@@ -966,201 +644,310 @@ def answer_question(question: str, persist_dir="chroma_db", top_k: int = 4):
         contexts = ["Data retrieved from dataset aggregations"]
 
     # Generate appropriate chart
-    chart = generate_smart_chart(df, question, top_k)
+    chart = generate_smart_chart(df, question, str(response), top_k)
 
     return str(response), contexts, chart
 
 
 # -------- Intelligent Chart Generation --------
-def generate_smart_chart(df: pd.DataFrame, question: str, top_k: int = 5):
-    """Generate appropriate chart based on question intent and actual data."""
-    q = question.lower()
+def generate_smart_chart(df: pd.DataFrame, question: str, answer_text: str, top_k: int = 5):
+    """Generate appropriate chart based on question, answer, and actual data."""
     
-    # Extract key information from the question
-    # Look for mentions of specific columns
-    id_cols = [c for c in df.columns if 'id' in c.lower() or 'order' in c.lower()]
-    qty_cols = [c for c in df.columns if 'quantity' in c.lower() or 'qty' in c.lower()]
-    price_cols = [c for c in df.columns if 'price' in c.lower() or 'cost' in c.lower() or 'revenue' in c.lower()]
-    product_cols = [c for c in df.columns if 'product' in c.lower()]
+    # First, ask the LLM which visualization would be most suitable
+    llm = OpenRouter(
+        model="anthropic/claude-3.5-sonnet",
+        api_key=OPENROUTER_API_KEY
+    )
     
-    # Detect chart type from question
-    if any(word in q for word in ["pie", "percent", "proportion", "share", "distribution"]):
-        return create_pie_chart(df, q)
-    elif any(word in q for word in ["trend", "over time", "line", "growth", "change", "time"]):
-        return create_line_chart(df, q)
-    elif any(word in q for word in ["compare", "vs", "versus", "difference", "between"]):
-        return create_comparison_chart(df, q)
-    elif any(word in q for word in ["top", "highest", "best", "most", "ranking", "order", "quantity"]):
-        # For "top X" questions, create a bar chart showing the specific results
-        if id_cols and qty_cols:
-            return create_top_orders_chart(df, id_cols[0], qty_cols[0], q)
-        else:
-            return create_bar_chart(df, q, top_k)
-    elif any(word in q for word in ["scatter", "relationship", "correlation"]):
-        return create_scatter_chart(df, q)
-    else:
-        # Default to bar chart for aggregations
-        return create_bar_chart(df, q, top_k)
-
-
-def create_top_orders_chart(df: pd.DataFrame, id_col: str, qty_col: str, question: str):
-    """Create bar chart for top orders by quantity."""
+    # Create a prompt to ask which visualization is most suitable
+    viz_prompt = f"""
+    Based on this question and answer about a dataset, what type of visualization would be most suitable to display?
+    
+    Question: {question}
+    Answer: {answer_text}
+    
+    Available chart types:
+    1. Bar chart (for comparisons, rankings, categories)
+    2. Line chart (for trends over time/sequence)
+    3. Pie chart (for proportions, distributions)
+    4. Scatter plot (for correlations, relationships)
+    5. Histogram (for frequency distributions)
+    6. Box plot (for statistical distributions, outliers)
+    7. Heatmap (for correlation matrices, cross-tabulations)
+    
+    Respond with ONLY ONE of these words: bar, line, pie, scatter, histogram, box, heatmap
+    """
+    
     try:
-        # Extract number from question if present (e.g., "top 5")
-        m = re.search(r"top\s+(\d+)", question)
-        top_n = int(m.group(1)) if m else 5
+        # Get the visualization recommendation from the LLM
+        viz_response = llm.complete(viz_prompt)
+        recommended_viz = str(viz_response).strip().lower()
         
-        # Get top N by quantity
-        top_orders = df.nlargest(top_n, qty_col)[[id_col, qty_col]].copy()
-        top_orders[id_col] = top_orders[id_col].astype(str)  # Convert to string for better display
-        
-        fig = px.bar(
-            top_orders, 
-            x=id_col, 
-            y=qty_col,
-            title=f"Top {top_n} {id_col}s by {qty_col}",
-            labels={id_col: id_col.title(), qty_col: qty_col.title()},
-            text=qty_col  # Show values on bars
-        )
-        fig.update_traces(textposition='outside')
-        fig.update_layout(
-            showlegend=False, 
-            height=400,
-            xaxis_title=id_col.title(),
-            yaxis_title=qty_col.title()
-        )
-        return fig
+        # Validate the recommendation
+        valid_viz_types = ['bar', 'line', 'pie', 'scatter', 'histogram', 'box', 'heatmap']
+        if recommended_viz not in valid_viz_types:
+            recommended_viz = 'bar'  # Default to bar chart if invalid
+            
+        # Generate the appropriate chart based on the recommendation
+        if recommended_viz == 'bar':
+            return create_top_values_bar(df)
+        elif recommended_viz == 'line':
+            return create_trend_line_chart(df)
+        elif recommended_viz == 'pie':
+            return create_distribution_pie_chart(df)
+        elif recommended_viz == 'scatter':
+            return create_scatter_analysis(df)
+        elif recommended_viz == 'histogram':
+            return create_histogram_analysis(df)
+        elif recommended_viz == 'box':
+            return create_box_plot(df)
+        elif recommended_viz == 'heatmap':
+            return create_heatmap_correlation(df)
+        else:
+            # Fallback to bar chart
+            return create_top_values_bar(df)
+            
     except Exception as e:
-        print(f"Error creating top orders chart: {e}")
-        return None
+        # If there's any error in the LLM call, fallback to a default visualization
+        print(f"Error getting visualization recommendation: {e}")
+        return create_top_values_bar(df)
 
-
-def create_bar_chart(df: pd.DataFrame, question: str, top_n: int = 5):
-    """Create bar chart for top N items."""
-    num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-    cat_cols = [
-        c for c in df.columns
-        if pd.api.types.is_string_dtype(df[c]) or pd.api.types.is_categorical_dtype(df[c])
-    ]
+def create_top_values_bar(df: pd.DataFrame) -> Optional[go.Figure]:
+    """Create bar chart for top values analysis."""
+    numeric_cols = df.select_dtypes(include=['number']).columns
+    cat_cols = df.select_dtypes(include=['object']).columns
     
-    if not num_cols or not cat_cols:
+    if len(numeric_cols) == 0 or len(cat_cols) == 0:
         return None
     
-    # Extract number from question if present
-    m = re.search(r"top\s+(\d+)", question)
-    if m:
-        top_n = int(m.group(1))
+    num_col = numeric_cols[0]
+    cat_col = cat_cols[0]
     
-    category = cat_cols[0]
-    metric = num_cols[0]
+    top_data = df.groupby(cat_col)[num_col].sum().nlargest(n=10)
     
-    try:
-        agg = df.groupby(category)[metric].sum().nlargest(top_n).reset_index()
-        fig = px.bar(agg, x=category, y=metric, 
-                     title=f"Top {top_n} {category} by {metric}",
-                     labels={category: category.title(), metric: metric.title()})
-        fig.update_layout(showlegend=False, height=400)
-        return fig
-    except Exception:
-        return None
+    fig = go.Figure(data=[
+        go.Bar(
+            x=top_data.index,
+            y=top_data.values,
+            marker=dict(
+                color=top_data.values,
+                colorscale='Blues',
+                showscale=True
+            ),
+            text=top_data.values,
+            textposition='outside'
+        )
+    ])
+    
+    fig.update_layout(
+        title=f"🏆 Top 10: {num_col} by {cat_col}",
+        xaxis_title=cat_col,
+        yaxis_title=num_col,
+        height=400,
+        template='plotly_white',
+        xaxis_tickangle=-45
+    )
+    
+    return fig
 
-
-def create_pie_chart(df: pd.DataFrame, question: str):
-    """Create pie chart for distribution."""
-    cat_cols = [
-        c for c in df.columns
-        if pd.api.types.is_string_dtype(df[c]) or pd.api.types.is_categorical_dtype(df[c])
-    ]
-    num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+def create_trend_line_chart(df: pd.DataFrame) -> Optional[go.Figure]:
+    """Create line chart for trend analysis."""
+    numeric_cols = df.select_dtypes(include=['number']).columns
     
-    if not cat_cols:
-        return None
-    
-    category = cat_cols[0]
-    metric = num_cols[0] if num_cols else None
-    
-    try:
-        if metric:
-            agg = df.groupby(category)[metric].sum()
-        else:
-            agg = df[category].value_counts()
-        
-        fig = px.pie(values=agg.values, names=agg.index, 
-                     title=f"Distribution of {category}")
-        fig.update_layout(height=400)
-        return fig
-    except Exception:
-        return None
-
-
-def create_line_chart(df: pd.DataFrame, question: str):
-    """Create line chart for trends."""
-    # Try to find a date/time column or numeric index column
-    date_cols = [c for c in df.columns if 'date' in c.lower() or 'time' in c.lower()]
-    num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-    
-    if not num_cols:
+    if len(numeric_cols) == 0:
         return None
     
-    try:
-        if date_cols:
-            x_col = date_cols[0]
-            df_sorted = df.sort_values(x_col)
-        else:
-            df_sorted = df.head(50)  # Limit to first 50 rows
-            x_col = df_sorted.index
-        
-        y_col = num_cols[0]
-        
-        fig = px.line(df_sorted, x=x_col, y=y_col,
-                      title=f"Trend of {y_col}",
-                      markers=True)
-        fig.update_layout(height=400)
-        return fig
-    except Exception:
-        return None
-
-
-def create_comparison_chart(df: pd.DataFrame, question: str):
-    """Create grouped bar chart for comparisons."""
-    cat_cols = [
-        c for c in df.columns
-        if pd.api.types.is_string_dtype(df[c]) or pd.api.types.is_categorical_dtype(df[c])
-    ]
-    num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+    # Use first numeric column and show cumulative trend
+    col = numeric_cols[0]
+    data = df[col].dropna().head(100)  # First 100 records
     
-    if len(cat_cols) < 2 or not num_cols:
-        return create_bar_chart(df, question)
-    
-    try:
-        cat1, cat2 = cat_cols[0], cat_cols[1]
-        metric = num_cols[0]
-        
-        agg = df.groupby([cat1, cat2])[metric].sum().reset_index()
-        fig = px.bar(agg, x=cat1, y=metric, color=cat2,
-                     title=f"Comparison of {metric} by {cat1} and {cat2}",
-                     barmode='group')
-        fig.update_layout(height=400)
-        return fig
-    except Exception:
-        return create_bar_chart(df, question)
-
-
-def create_scatter_chart(df: pd.DataFrame, question: str):
-    """Create scatter plot for correlations."""
-    num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-    
-    if len(num_cols) < 2:
+    if len(data) < 2:
         return None
     
-    try:
-        x_col, y_col = num_cols[0], num_cols[1]
-        
-        fig = px.scatter(df, x=x_col, y=y_col,
-                        title=f"Relationship between {x_col} and {y_col}",
-                        trendline="ols")
-        fig.update_layout(height=400)
-        return fig
-    except Exception:
-        return None
+    fig = go.Figure()
+    
+    # Trend line
+    fig.add_trace(go.Scatter(
+        x=list(range(len(data))),
+        y=data.values,
+        mode='lines+markers',
+        name=f'{col} Trend',
+        line=dict(color='#667eea', width=3),
+        marker=dict(size=6)
+    ))
+    
+    # Moving average
+    ma = pd.Series(data.values).rolling(window=5, center=True).mean()
+    fig.add_trace(go.Scatter(
+        x=list(range(len(data))),
+        y=ma.tolist(),
+        mode='lines',
+        name='5-Point MA',
+        line=dict(color='#f56565', width=2, dash='dash')
+    ))
+    
+    fig.update_layout(
+        title=f"📈 Trend Analysis: {col}",
+        xaxis_title='Record Index',
+        yaxis_title='Value',
+        height=400,
+        template='plotly_white',
+        hovermode='x unified'
+    )
+    
+    return fig
 
+def create_distribution_pie_chart(df: pd.DataFrame) -> Optional[go.Figure]:
+    """Create pie chart for categorical distribution analysis."""
+    cat_cols = df.select_dtypes(include=['object']).columns
+    
+    if len(cat_cols) == 0:
+        return None
+    
+    col = cat_cols[0]
+    value_counts = df[col].value_counts().head(10)
+    
+    fig = go.Figure(data=[go.Pie(
+        labels=value_counts.index,
+        values=value_counts.values,
+        marker=dict(colors=px.colors.qualitative.Set3),
+        textposition='inside',
+        textinfo='label+percent'
+    )])
+    
+    fig.update_layout(
+        title=f"📊 Distribution Analysis: {col}",
+        height=400,
+        template='plotly_white'
+    )
+    
+    return fig
+
+def create_scatter_analysis(df: pd.DataFrame) -> Optional[go.Figure]:
+    """Create scatter plot for relationship analysis."""
+    numeric_cols = df.select_dtypes(include=['number']).columns
+    
+    if len(numeric_cols) < 2:
+        return None
+    
+    x_col = numeric_cols[0]
+    y_col = numeric_cols[1]
+    
+    fig = go.Figure(data=[
+        go.Scatter(
+            x=df[x_col].dropna(),
+            y=df[y_col].dropna(),
+            mode='markers',
+            marker=dict(
+                size=6,
+                color=df[x_col].dropna(),
+                colorscale='Viridis',
+                showscale=True,
+                colorbar=dict(title='Value')
+            ),
+            name=f'{x_col} vs {y_col}'
+        )
+    ])
+    
+    fig.update_layout(
+        title=f"🔗 Relationship: {x_col} vs {y_col}",
+        xaxis_title=x_col,
+        yaxis_title=y_col,
+        height=400,
+        template='plotly_white'
+    )
+    
+    return fig
+
+def create_histogram_analysis(df: pd.DataFrame) -> Optional[go.Figure]:
+    """Create histogram for frequency distribution analysis."""
+    numeric_cols = df.select_dtypes(include=['number']).columns
+    
+    if len(numeric_cols) == 0:
+        return None
+    
+    col = numeric_cols[0]
+    data = df[col].dropna().astype(float)
+    
+    # Calculate appropriate number of bins
+    nbins = int(min(30, max(5, len(data) // 20)))
+    
+    fig = go.Figure(data=[
+        go.Histogram(
+            x=data,
+            nbinsx=nbins,
+            name=col,
+            marker_color='#667eea',
+            opacity=0.75
+        )
+    ])
+    
+    fig.update_layout(
+        title=f"📊 Frequency Distribution: {col}",
+        xaxis_title=col,
+        yaxis_title='Frequency',
+        height=400,
+        template='plotly_white'
+    )
+    
+    return fig
+
+def create_box_plot(df: pd.DataFrame) -> Optional[go.Figure]:
+    """Create box plot for distribution and outlier analysis."""
+    numeric_cols = df.select_dtypes(include=['number']).columns
+    
+    if len(numeric_cols) == 0:
+        return None
+    
+    # Use top 4 numeric columns
+    cols_to_plot = numeric_cols[:4]
+    
+    fig = go.Figure()
+    
+    for col in cols_to_plot:
+        fig.add_trace(go.Box(
+            y=df[col].dropna(),
+            name=col,
+            boxmean='sd'
+        ))
+    
+    fig.update_layout(
+        title="📦 Statistical Distribution & Outliers",
+        yaxis_title='Value',
+        height=400,
+        template='plotly_white',
+        hovermode='y'
+    )
+    
+    return fig
+
+def create_heatmap_correlation(df: pd.DataFrame) -> Optional[go.Figure]:
+    """Create correlation heatmap for numeric columns."""
+    numeric_cols = df.select_dtypes(include=['number']).columns
+    
+    if len(numeric_cols) < 2:
+        return None
+    
+    corr_matrix = df[numeric_cols].corr()
+    
+    fig = go.Figure(data=go.Heatmap(
+        z=corr_matrix.values,
+        x=corr_matrix.columns,
+        y=corr_matrix.columns,
+        colorscale='RdBu',
+        zmid=0,
+        text=np.round(corr_matrix.values, 2),
+        texttemplate='%{text}',
+        textfont={"size": 10},
+        colorbar=dict(title='Correlation')
+    ))
+    
+    fig.update_layout(
+        title="🔥 Correlation Matrix: Numeric Columns",
+        height=400,
+        xaxis_title='Columns',
+        yaxis_title='Columns',
+        template='plotly_white'
+    )
+    
+    return fig
