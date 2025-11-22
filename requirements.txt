@@ -8,8 +8,10 @@ python-dotenv
 google-generativeai
 llama-index-embeddings-gemini
 llama-index-llms-openrouter
-llama-index==0.10.52
-llama-index-core==0.10.52
+llama-index==0.10.46
+llama-index-core==0.10.46
+llama-index-cli==0.1.12
 sentence-transformers
 torch
 openpyxl
+scipy
